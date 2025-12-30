@@ -1,0 +1,36 @@
+@page "/habits/create"
+@inject SmartHabit.Client.Services.IMockApiService Api
+@inject SmartHabit.Client.State.AppState AppState
+@inject NavigationManager Nav
+
+<h3>Novo Hábito</h3>
+@if (AppState.CurrentUser == null)
+{
+    <p>Faça login primeiro.</p>
+}
+else
+{
+    <EditForm Model="model" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+        <div>
+            <label>Título</label>
+            <InputText @bind-Value="model.Title" />
+        </div>
+        <div>
+            <label>Descrição</label>
+            <InputText @bind-Value="model.Description" />
+        </div>
+        <button type="submit">Criar</button>
+    </EditForm>
+}
+
+@code {
+    private SmartHabit.Client.Models.Habit model = new();
+
+    private async Task Save()
+    {
+        model.OwnerId = AppState.CurrentUser!.Id;
+        await Api.AddHabitAsync(model);
+        Nav.NavigateTo("/");
+    }
+}

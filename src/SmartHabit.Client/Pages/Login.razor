@@ -1,0 +1,46 @@
+@page "/login"
+@inject SmartHabit.Client.Services.IAuthService Auth
+@inject SmartHabit.Client.State.AppState AppState
+@using System.ComponentModel.DataAnnotations
+
+<h3>Login</h3>
+
+<EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Email</label>
+        <InputText @bind-Value="loginModel.Email" />
+    </div>
+    <div>
+        <label>Password</label>
+        <InputText @bind-Value="loginModel.Password" type="password" />
+    </div>
+    <button type="submit">Login</button>
+</EditForm>
+
+@code {
+    private LoginModel loginModel = new();
+
+    private async Task HandleLogin()
+    {
+        var user = await Auth.LoginAsync(loginModel.Email, loginModel.Password);
+        if (user != null)
+        {
+            AppState.CurrentUser = user;
+        }
+        else
+        {
+            // show error (simple)
+        }
+    }
+
+    private class LoginModel
+    {
+        [Required]
+        public string Email { get; set; } = string.Empty;
+        [Required]
+        public string Password { get; set; } = string.Empty;
+    }
+}

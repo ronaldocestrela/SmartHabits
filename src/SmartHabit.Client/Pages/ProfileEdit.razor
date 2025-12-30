@@ -1,0 +1,44 @@
+@page "/profile"
+@inject SmartHabit.Client.State.AppState AppState
+@inject SmartHabit.Client.Services.IAuthService Auth
+
+<h3>Editar Perfil</h3>
+@if (AppState.CurrentUser == null)
+{
+    <p>Faça login para editar o perfil.</p>
+}
+else
+{
+    <EditForm Model="model" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+        <div>
+            <label>Nome</label>
+            <InputText @bind-Value="model.FirstName" />
+        </div>
+        <div>
+            <label>Sobrenome</label>
+            <InputText @bind-Value="model.LastName" />
+        </div>
+        <div>
+            <label>Telefone</label>
+            <InputText @bind-Value="model.Phone" />
+        </div>
+        <button type="submit">Salvar</button>
+    </EditForm>
+}
+
+@code {
+    private SmartHabit.Client.Models.User model = new();
+
+    protected override void OnInitialized()
+    {
+        if (AppState.CurrentUser != null) model = AppState.CurrentUser;
+    }
+
+    private Task Save()
+    {
+        // For mock, we rely on the mock api to update the stored user later
+        AppState.CurrentUser = model;
+        return Task.CompletedTask;
+    }
+}

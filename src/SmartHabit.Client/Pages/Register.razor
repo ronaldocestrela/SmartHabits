@@ -1,0 +1,73 @@
+@page "/register"
+@inject SmartHabit.Client.Services.IAuthService Auth
+@inject SmartHabit.Client.State.AppState AppState
+@using System.ComponentModel.DataAnnotations
+
+<h3>Register</h3>
+
+<EditForm Model="regModel" OnValidSubmit="HandleRegister">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>First name</label>
+        <InputText @bind-Value="regModel.FirstName" />
+    </div>
+    <div>
+        <label>Last name</label>
+        <InputText @bind-Value="regModel.LastName" />
+    </div>
+    <div>
+        <label>Email</label>
+        <InputText @bind-Value="regModel.Email" />
+    </div>
+    <div>
+        <label>Password</label>
+        <InputText @bind-Value="regModel.Password" type="password" />
+    </div>
+    <div>
+        <label>Confirm</label>
+        <InputText @bind-Value="regModel.Confirm" type="password" />
+    </div>
+    <button type="submit">Register</button>
+</EditForm>
+
+@code {
+    private RegisterModel regModel = new();
+
+    private async Task HandleRegister()
+    {
+        if (regModel.Password != regModel.Confirm) return;
+        var user = new SmartHabit.Client.Models.User
+        {
+            FirstName = regModel.FirstName,
+            LastName = regModel.LastName,
+            Email = regModel.Email,
+            Phone = regModel.Phone
+        };
+        var created = await Auth.RegisterAsync(user, regModel.Password);
+        if (created != null)
+        {
+            AppState.CurrentUser = created;
+        }
+        else
+        {
+            // show validation error
+        }
+    }
+
+    private class RegisterModel
+    {
+        [Required]
+        public string FirstName { get; set; } = string.Empty;
+        [Required]
+        public string LastName { get; set; } = string.Empty;
+        [Required, EmailAddress]
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        [Required]
+        public string Password { get; set; } = string.Empty;
+        [Required]
+        public string Confirm { get; set; } = string.Empty;
+    }
+}

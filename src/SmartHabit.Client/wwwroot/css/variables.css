@@ -1,0 +1,11 @@
+/* Theme variables */
+:root {
+  --background: #0f0f10;
+  --foreground: #f5f5f5;
+  --primary-color: #8B0000; /* dark red */
+}
+
+body.light {
+  --background: #ffffff;
+  --foreground: #111111;
+}

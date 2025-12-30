@@ -1,0 +1,42 @@
+@page "/habits/edit/{Id}"
+@inject SmartHabit.Client.Services.IMockApiService Api
+@inject NavigationManager Nav
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = string.Empty;
+    private SmartHabit.Client.Models.Habit? model;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        model = await Api.GetHabitAsync(Id);
+    }
+
+    private async Task Save()
+    {
+        if (model != null)
+        {
+            await Api.UpdateHabitAsync(model);
+            Nav.NavigateTo("/");
+        }
+    }
+}
+
+@if (model == null)
+{
+    <p>Hábito não encontrado.</p>
+}
+else
+{
+    <EditForm Model="model" OnValidSubmit="Save">
+        <div>
+            <label>Título</label>
+            <InputText @bind-Value="model.Title" />
+        </div>
+        <div>
+            <label>Descrição</label>
+            <InputText @bind-Value="model.Description" />
+        </div>
+        <button type="submit">Salvar</button>
+    </EditForm>
+}

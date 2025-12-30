@@ -1,0 +1,17 @@
+@page "/"
+@inject SmartHabit.Client.State.AppState AppState
+@inject SmartHabit.Client.Services.IMockApiService Api
+
+<h3>Dashboard</h3>
+@if (AppState.CurrentUser == null)
+{
+    <p>Por favor faça login para ver suas rotinas.</p>
+}
+else
+{
+    <p>Bem-vindo, @AppState.CurrentUser.FirstName!</p>
+    <h4>Meus hábitos</h4>
+    <HabitsList OwnerId="AppState.CurrentUser.Id" />
+}
+
+@code { }

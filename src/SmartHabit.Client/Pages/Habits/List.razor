@@ -1,0 +1,35 @@
+@page "/habits"
+@using SmartHabit.Client.Models
+@inject SmartHabit.Client.Services.IMockApiService Api
+@inject NavigationManager Nav
+@inject SmartHabit.Client.State.AppState AppState
+
+@code {
+    [Parameter]
+    public string OwnerId { get; set; } = string.Empty;
+
+    private List<Habit> habits = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var owner = OwnerId;
+        if (string.IsNullOrEmpty(owner)) owner = AppState.CurrentUser?.Id ?? string.Empty;
+        if (!string.IsNullOrEmpty(owner))
+        {
+            habits = await Api.GetHabitsForOwnerAsync(owner);
+        }
+    }
+}
+
+<div>
+    <button @onclick="() => Nav.NavigateTo("/habits/create")">Novo hábito</button>
+    <ul>
+        @foreach(var h in habits)
+        {
+            <li>
+                <b>@h.Title</b>
+                <button @onclick="() => Nav.NavigateTo($"/habits/edit/{h.Id}")">Editar</button>
+            </li>
+        }
+    </ul>
+</div>

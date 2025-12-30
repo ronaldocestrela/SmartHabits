@@ -107,3 +107,8 @@ wwwroot/*.gz
 # Ignore local secrets/environment files
 .env
 .env.local
+src/SmartHabit.Client/obj/project.nuget.cache
+.cache
+
+obj/
+bin/
