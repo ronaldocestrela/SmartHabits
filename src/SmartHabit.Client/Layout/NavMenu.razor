@@ -12,7 +12,7 @@
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="nav flex-column">
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Home</NavLink>
+            <NavLink class="nav-link" href="/home" Match="NavLinkMatch.All">Home</NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="/">Dashboard</NavLink>
@@ -49,15 +49,5 @@
     {
         var current = await ThemeService.IsDarkAsync();
         await ThemeService.SetDarkAsync(!current);
-    }
-}
-@code {
-    private bool collapseNavMenu = true;
-
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
     }
 }
