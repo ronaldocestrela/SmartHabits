@@ -1,0 +1,6 @@
+@page "/habits"
+@using SmartHabit.Client.Pages.Habits
+@inject SmartHabit.Client.State.AppState AppState
+
+<h3>Meus hábitos</h3>
+<HabitsList OwnerId="AppState.CurrentUser?.Id" />

@@ -1,6 +1,4 @@
 using SmartHabit.Client.Models;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace SmartHabit.Client.Services
 {

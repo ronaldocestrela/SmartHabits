@@ -1,18 +1,12 @@
 using Microsoft.JSInterop;
-using System.Threading.Tasks;
 
 namespace SmartHabit.Client.Services
 {
-    public class ThemeService : IThemeService
+    public class ThemeService(IJSRuntime js) : IThemeService
     {
-        private readonly IJSRuntime _js;
+        private readonly IJSRuntime _js = js;
         private const string Key = "smarthabit_theme_dark";
-        public event System.Action? ThemeChanged;
-
-        public ThemeService(IJSRuntime js)
-        {
-            _js = js;
-        }
+        public event Action? ThemeChanged;
 
         public async Task<bool> IsDarkAsync()
         {

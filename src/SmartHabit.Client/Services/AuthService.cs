@@ -1,26 +1,19 @@
 using System.Security.Cryptography;
 using System.Text;
 using SmartHabit.Client.Models;
-using System.Threading.Tasks;
-using System.Linq;
 
 namespace SmartHabit.Client.Services
 {
-    public class AuthService : IAuthService
+    public class AuthService(IMockApiService api) : IAuthService
     {
-        private readonly IMockApiService _api;
+        private readonly IMockApiService _api = api;
         private User? _current;
-
-        public AuthService(IMockApiService api)
-        {
-            _api = api;
-        }
 
         private static string Hash(string input)
         {
             using var sha = SHA256.Create();
             var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
-            return System.BitConverter.ToString(bytes).Replace("-", string.Empty);
+            return BitConverter.ToString(bytes).Replace("-", string.Empty);
         }
 
         public async Task<User?> LoginAsync(string email, string password)
