@@ -1,4 +1,3 @@
-@page "/habits"
 @using SmartHabit.Client.Models
 @inject SmartHabit.Client.Services.IMockApiService Api
 @inject NavigationManager Nav
@@ -19,16 +18,19 @@
             habits = await Api.GetHabitsForOwnerAsync(owner);
         }
     }
+
+    private void CreateHabit() => Nav.NavigateTo("/habits/create");
+    private void EditHabit(string id) => Nav.NavigateTo($"/habits/edit/{id}");
 }
 
 <div>
-    <button @onclick="() => Nav.NavigateTo("/habits/create")">Novo hábito</button>
+    <button @onclick="CreateHabit">Novo hábito</button>
     <ul>
         @foreach(var h in habits)
         {
             <li>
                 <b>@h.Title</b>
-                <button @onclick="() => Nav.NavigateTo($"/habits/edit/{h.Id}")">Editar</button>
+                <button @onclick="() => EditHabit(h.Id)">Editar</button>
             </li>
         }
     </ul>
