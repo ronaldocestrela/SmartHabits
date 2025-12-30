@@ -1,0 +1,109 @@
+# .gitignore para projeto .NET (ASP.NET Core / Blazor)
+
+# Build outputs
+/bin/
+/obj/
+/out/
+/artifacts/
+/publish/
+/TestResults/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider / IntelliJ
+.idea/
+/*.iml
+*.iws
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# NuGet
+*.nupkg
+packages/
+.nuget/
+
+# DotNet publish / runtime
+*.dll
+*.exe
+*.app
+*.so
+*.dylib
+
+# Logs, temp files
+*.log
+logs/
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swx
+
+# Test & Coverage
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+*.testsettings
+*.RunSettings
+
+# User secrets
+secrets.json
+secrets.*.json
+
+# Rider / ReSharper
+_ReSharper*/
+*.DotSettings.user
+*.sln.DotSettings.user
+
+# dotCover / OpenCover
+*.dcov
+*.opencover.xml
+
+# Visual Studio Code Extension Server
+.vscode-test/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Node / client tooling (if used)
+node_modules/
+npm-debug.log
+yarn-error.log
+pnpm-lock.yaml
+
+# LibMan
+libman/
+
+# Blazor / ASP.NET Core generated static assets
+wwwroot/_framework/
+wwwroot/_tools/
+wwwroot/*.br
+wwwroot/*.gz
+
+# EF Migrations, db files (ignore if generated; remove if you track migrations)
+*.mdf
+*.ldf
+*.sqlite
+*.db
+*.db-journal
+
+# Temporary publish files
+*.publishsettings
+*.pubxml.user
+
+# Ignore Rider IDE backend caches
+.idea/
+*.ipr
+*.iws
+
+# Ignore local secrets/environment files
+.env
+.env.local
