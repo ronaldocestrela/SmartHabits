@@ -1,42 +1,180 @@
 @page "/habits/edit/{Id}"
+@using SmartHabit.Client.Models
+@using System.ComponentModel.DataAnnotations
 @inject SmartHabit.Client.Services.IMockApiService Api
+@inject SmartHabit.Client.State.AppState AppState
 @inject NavigationManager Nav
 
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title mb-4">Editar Hábito</h3>
+                    
+                    @if (AppState.CurrentUser == null)
+                    {
+                        <div class="alert alert-warning">
+                            <p class="mb-0">Por favor, faça login primeiro.</p>
+                        </div>
+                    }
+                    else if (model == null && !isLoading)
+                    {
+                        <div class="alert alert-danger">
+                            <p class="mb-0">Hábito não encontrado.</p>
+                        </div>
+                    }
+                    else if (isLoading)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+                    else if (model != null)
+                    {
+                        <EditForm Model="editModel" OnValidSubmit="Save">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger mb-3" />
+
+                            <div class="mb-3">
+                                <label class="form-label">Título</label>
+                                <InputText @bind-Value="editModel.Title" class="form-control" placeholder="Ex: Exercitar-se, Ler, Meditar..." />
+                                <ValidationMessage For="() => editModel.Title" class="text-danger" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Descrição</label>
+                                <InputTextArea @bind-Value="editModel.Description" class="form-control" rows="3" placeholder="Descreva como você pretende praticar este hábito..." />
+                                <ValidationMessage For="() => editModel.Description" class="text-danger" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Categoria</label>
+                                <InputSelect @bind-Value="editModel.Category" class="form-select">
+                                    <option value="@HabitCategory.Health">Saúde</option>
+                                    <option value="@HabitCategory.Fitness">Exercícios</option>
+                                    <option value="@HabitCategory.Study">Estudos</option>
+                                    <option value="@HabitCategory.Work">Trabalho</option>
+                                    <option value="@HabitCategory.Social">Social</option>
+                                    <option value="@HabitCategory.Creative">Criatividade</option>
+                                    <option value="@HabitCategory.Other">Outros</option>
+                                </InputSelect>
+                                <ValidationMessage For="() => editModel.Category" class="text-danger" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <InputCheckbox @bind-Value="editModel.IsActive" class="form-check-input" id="isActive" />
+                                    <label class="form-check-label" for="isActive">
+                                        Hábito ativo
+                                    </label>
+                                </div>
+                                <div class="form-text text-muted">Desmarque para pausar temporariamente este hábito.</div>
+                            </div>
+                            
+                            <div class="d-flex gap-3">
+                                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    Salvar Alterações
+                                </button>
+                                <button type="button" class="btn btn-secondary" @onclick="Cancel">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @code {
-    [Parameter]
-    public string Id { get; set; } = string.Empty;
-    private SmartHabit.Client.Models.Habit? model;
+    [Parameter] public string Id { get; set; } = string.Empty;
+    
+    private Habit? model;
+    private EditHabitModel editModel = new();
+    private string errorMessage = string.Empty;
+    private bool isLoading = true;
+    private bool isSubmitting = false;
 
     protected override async Task OnParametersSetAsync()
     {
+        isLoading = true;
         model = await Api.GetHabitAsync(Id);
+        
+        if (model != null && AppState.CurrentUser?.Id == model.OwnerId)
+        {
+            editModel = new EditHabitModel
+            {
+                Title = model.Title,
+                Description = model.Description,
+                Category = model.Category,
+                IsActive = model.IsActive
+            };
+        }
+        else if (model != null)
+        {
+            model = null; // Usuário não é dono do hábito
+        }
+        
+        isLoading = false;
     }
 
     private async Task Save()
     {
-        if (model != null)
+        if (model == null || AppState.CurrentUser == null) return;
+        
+        errorMessage = string.Empty;
+        isSubmitting = true;
+
+        try
         {
+            // Atualizar o hábito com os dados do formulário
+            model.Title = editModel.Title;
+            model.Description = editModel.Description;
+            model.Category = editModel.Category;
+            model.IsActive = editModel.IsActive;
+
             await Api.UpdateHabitAsync(model);
-            Nav.NavigateTo("/");
+            Nav.NavigateTo("/habits");
+        }
+        catch (Exception)
+        {
+            errorMessage = "Ocorreu um erro ao salvar o hábito. Tente novamente.";
+        }
+        finally
+        {
+            isSubmitting = false;
         }
     }
-}
 
-@if (model == null)
-{
-    <p>Hábito não encontrado.</p>
-}
-else
-{
-    <EditForm Model="model" OnValidSubmit="Save">
-        <div>
-            <label>Título</label>
-            <InputText @bind-Value="model.Title" />
-        </div>
-        <div>
-            <label>Descrição</label>
-            <InputText @bind-Value="model.Description" />
-        </div>
-        <button type="submit">Salvar</button>
-    </EditForm>
+    private void Cancel()
+    {
+        Nav.NavigateTo("/habits");
+    }
+
+    private class EditHabitModel
+    {
+        [Required(ErrorMessage = "O título é obrigatório.")]
+        [StringLength(100, ErrorMessage = "O título deve ter no máximo 100 caracteres.")]
+        public string Title { get; set; } = string.Empty;
+        
+        [StringLength(500, ErrorMessage = "A descrição deve ter no máximo 500 caracteres.")]
+        public string? Description { get; set; }
+        
+        [Required(ErrorMessage = "Selecione uma categoria.")]
+        public HabitCategory Category { get; set; } = HabitCategory.Other;
+        
+        public bool IsActive { get; set; } = true;
+    }
 }

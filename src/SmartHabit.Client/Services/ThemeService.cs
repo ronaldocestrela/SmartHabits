@@ -10,15 +10,57 @@ namespace SmartHabit.Client.Services
 
         public async Task<bool> IsDarkAsync()
         {
-            var v = await _js.InvokeAsync<string>("localStorage.getItem", Key);
-            if (bool.TryParse(v, out var res)) return res;
-            return true; // default dark
+            try
+            {
+                var value = await _js.InvokeAsync<string>("localStorage.getItem", Key);
+                if (bool.TryParse(value, out var result)) 
+                    return result;
+                return true; // default dark theme
+            }
+            catch
+            {
+                return true; // fallback to dark theme
+            }
         }
 
         public async Task SetDarkAsync(bool isDark)
         {
-            await _js.InvokeVoidAsync("localStorage.setItem", Key, isDark.ToString());
-            ThemeChanged?.Invoke();
+            try
+            {
+                await _js.InvokeVoidAsync("localStorage.setItem", Key, isDark.ToString());
+                await ApplyThemeAsync(isDark);
+                ThemeChanged?.Invoke();
+            }
+            catch
+            {
+                // Handle JS interop errors silently
+            }
+        }
+
+        public async Task InitializeThemeAsync()
+        {
+            try
+            {
+                var isDark = await IsDarkAsync();
+                await ApplyThemeAsync(isDark);
+            }
+            catch
+            {
+                // Handle initialization errors silently
+            }
+        }
+
+        private async Task ApplyThemeAsync(bool isDark)
+        {
+            try
+            {
+                var theme = isDark ? "dark" : "light";
+                await _js.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-theme', '{theme}')");
+            }
+            catch
+            {
+                // Handle JS errors silently
+            }
         }
     }
 }

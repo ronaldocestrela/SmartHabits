@@ -4,6 +4,7 @@ namespace SmartHabit.Client.Services
     {
         Task<bool> IsDarkAsync();
         Task SetDarkAsync(bool isDark);
+        Task InitializeThemeAsync();
         event Action? ThemeChanged;
     }
 }

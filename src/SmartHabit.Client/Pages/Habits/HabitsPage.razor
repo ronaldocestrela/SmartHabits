@@ -1,6 +1,186 @@
 @page "/habits"
-@using SmartHabit.Client.Pages.Habits
+@using SmartHabit.Client.Models
+@using Microsoft.JSInterop
+@inject SmartHabit.Client.Services.IMockApiService Api
 @inject SmartHabit.Client.State.AppState AppState
+@inject NavigationManager Nav
+@inject IJSRuntime JSRuntime
 
-<h3>Meus hábitos</h3>
-<HabitsList OwnerId="AppState.CurrentUser?.Id" />
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Meus Hábitos</h2>
+                <a href="/habits/create" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Novo Hábito
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (AppState.CurrentUser == null)
+    {
+        <div class="alert alert-warning">
+            <p class="mb-0">Por favor, faça login para ver seus hábitos.</p>
+        </div>
+    }
+    else if (!habits.Any())
+    {
+        <div class="text-center py-5">
+            <h4 class="text-muted mb-3">Nenhum hábito encontrado</h4>
+            <p class="text-muted mb-4">Comece criando seu primeiro hábito!</p>
+            <a href="/habits/create" class="btn btn-primary">Criar Primeiro Hábito</a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var habit in habits)
+            {
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h5 class="card-title mb-1">@habit.Title</h5>
+                                    <span class="badge bg-secondary small">@GetCategoryName(habit.Category)</span>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                                        ⋮
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="/habits/edit/@habit.Id">Editar</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><button class="dropdown-item text-danger" @onclick="() => DeleteHabit(habit)">Excluir</button></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(habit.Description))
+                            {
+                                <p class="card-text text-muted small mb-3">@habit.Description</p>
+                            }
+                            
+                            <div class="row text-center mb-3">
+                                <div class="col-4">
+                                    <div class="small text-muted">Sequência Atual</div>
+                                    <div class="fw-bold text-primary">@habit.CurrentStreak</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="small text-muted">Melhor Sequência</div>
+                                    <div class="fw-bold text-success">@habit.BestStreak</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="small text-muted">Total</div>
+                                    <div class="fw-bold text-info">@habit.TotalCompletions</div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    Criado em @habit.CreatedAt.ToString("dd/MM/yyyy")
+                                </small>
+                                @if (IsCompletedToday(habit))
+                                {
+                                    <span class="badge bg-success">✓ Concluído hoje</span>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-sm btn-success" @onclick="() => MarkAsCompleted(habit)">
+                                        Marcar como feito
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Habit> habits = new();
+    private List<HabitCompletion> todayCompletions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AppState.CurrentUser != null)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        habits = (await Api.GetHabitsByUserAsync(AppState.CurrentUser!.Id)).ToList();
+        todayCompletions = (await Api.GetCompletionsByDateAsync(AppState.CurrentUser!.Id, DateTime.Today)).ToList();
+    }
+
+    private string GetCategoryName(HabitCategory category)
+    {
+        return category switch
+        {
+            HabitCategory.Health => "Saúde",
+            HabitCategory.Fitness => "Exercícios",
+            HabitCategory.Study => "Estudos",
+            HabitCategory.Work => "Trabalho",
+            HabitCategory.Social => "Social",
+            HabitCategory.Creative => "Criatividade",
+            _ => "Outros"
+        };
+    }
+
+    private bool IsCompletedToday(Habit habit)
+    {
+        return todayCompletions.Any(c => c.HabitId == habit.Id);
+    }
+
+    private async Task MarkAsCompleted(Habit habit)
+    {
+        var completion = new HabitCompletion
+        {
+            HabitId = habit.Id,
+            UserId = AppState.CurrentUser!.Id,
+            Date = DateTime.Today,
+            CompletedAt = DateTime.Now
+        };
+
+        await Api.AddCompletionAsync(completion);
+        
+        // Atualizar estatísticas do hábito
+        habit.LastCompletedAt = DateTime.Now;
+        habit.TotalCompletions++;
+        
+        // Calcular sequência (lógica simplificada)
+        var yesterdayCompletion = await Api.GetCompletionsByDateAsync(AppState.CurrentUser!.Id, DateTime.Today.AddDays(-1));
+        if (yesterdayCompletion.Any(c => c.HabitId == habit.Id))
+        {
+            habit.CurrentStreak++;
+        }
+        else
+        {
+            habit.CurrentStreak = 1;
+        }
+        
+        if (habit.CurrentStreak > habit.BestStreak)
+        {
+            habit.BestStreak = habit.CurrentStreak;
+        }
+
+        await Api.UpdateHabitAsync(habit);
+        await LoadData();
+        StateHasChanged();
+    }
+
+    private async Task DeleteHabit(Habit habit)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Tem certeza que deseja excluir o hábito '{habit.Title}'?"))
+        {
+            await Api.DeleteHabitAsync(habit.Id);
+            await LoadData();
+            StateHasChanged();
+        }
+    }
+}

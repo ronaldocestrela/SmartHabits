@@ -1,18 +1,224 @@
 @page "/"
 @using SmartHabit.Client.Pages.Habits
+@using SmartHabit.Client.Models
 @inject SmartHabit.Client.State.AppState AppState
 @inject SmartHabit.Client.Services.IMockApiService Api
 
-<h3>Dashboard</h3>
-@if (AppState.CurrentUser == null)
-{
-    <p>Por favor faça login para ver suas rotinas.</p>
-}
-else
-{
-    <p>Bem-vindo, @AppState.CurrentUser.FirstName!</p>
-    <h4>Meus hábitos</h4>
-    <HabitsList OwnerId="AppState.CurrentUser.Id" />
-}
+<div class="container-fluid">
+    @if (AppState.CurrentUser == null)
+    {
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="text-center py-5">
+                    <h1 class="display-4 mb-4">SmartHabits</h1>
+                    <p class="lead mb-4">Transforme sua vida, um hábito de cada vez.</p>
+                    <div class="d-flex gap-3 justify-content-center">
+                        <a href="/login" class="btn btn-primary btn-lg">Fazer Login</a>
+                        <a href="/register" class="btn btn-outline-primary btn-lg">Cadastre-se</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Dashboard</h2>
+                    <a href="/habits/create" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Novo Hábito
+                    </a>
+                </div>
+            </div>
+        </div>
 
-@code { }
+        <!-- Cards de Resumo -->
+        <div class="row mb-4">
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">@totalHabits</h5>
+                        <p class="card-text text-muted">Hábitos Ativos</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">@completedToday</h5>
+                        <p class="card-text text-muted">Concluídos Hoje</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">@currentStreak</h5>
+                        <p class="card-text text-muted">Sequência Atual</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">@(totalHabits > 0 ? Math.Round((double)completedToday / totalHabits * 100, 1) : 0)%</h5>
+                        <p class="card-text text-muted">Meta de Hoje</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hábitos de Hoje -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Hábitos de Hoje</h5>
+                        <p class="card-text text-muted small">@DateTime.Now.ToString("dddd, dd/MM/yyyy")</p>
+                    </div>
+                    <div class="card-body">
+                        @if (!habits.Any())
+                        {
+                            <div class="text-center py-4">
+                                <p class="text-muted mb-3">Você ainda não tem hábitos cadastrados.</p>
+                                <a href="/habits/create" class="btn btn-primary">Criar Primeiro Hábito</a>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="row">
+                                @foreach (var habit in habits)
+                                {
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="card h-100 @(IsCompletedToday(habit) ? "border-success" : "")">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <h6 class="card-title mb-0">@habit.Title</h6>
+                                                    @if (IsCompletedToday(habit))
+                                                    {
+                                                        <span class="badge bg-success">✓</span>
+                                                    }
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(habit.Description))
+                                                {
+                                                    <p class="card-text text-muted small">@habit.Description</p>
+                                                }
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-muted">
+                                                        Sequência: @habit.CurrentStreak dias
+                                                    </small>
+                                                    @if (!IsCompletedToday(habit))
+                                                    {
+                                                        <button class="btn btn-sm btn-success" @onclick="() => MarkAsCompleted(habit)">
+                                                            Marcar Concluído
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => UnmarkCompleted(habit)">
+                                                            Desmarcar
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Link para ver todos os hábitos -->
+        <div class="row mt-4">
+            <div class="col-12 text-center">
+                <a href="/habits" class="btn btn-outline-primary">Ver Todos os Hábitos</a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Habit> habits = new();
+    private List<HabitCompletion> completions = new();
+    private int totalHabits = 0;
+    private int completedToday = 0;
+    private int currentStreak = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AppState.CurrentUser != null)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        habits = (await Api.GetHabitsByUserAsync(AppState.CurrentUser!.Id)).ToList();
+        completions = (await Api.GetCompletionsByDateAsync(AppState.CurrentUser!.Id, DateTime.Today)).ToList();
+        
+        totalHabits = habits.Count;
+        completedToday = completions.Count;
+        currentStreak = habits.Any() ? (int)habits.Average(h => h.CurrentStreak) : 0;
+    }
+
+    private bool IsCompletedToday(Habit habit)
+    {
+        return completions.Any(c => c.HabitId == habit.Id && c.Date.Date == DateTime.Today);
+    }
+
+    private async Task MarkAsCompleted(Habit habit)
+    {
+        var completion = new HabitCompletion
+        {
+            HabitId = habit.Id,
+            UserId = AppState.CurrentUser!.Id,
+            Date = DateTime.Today,
+            CompletedAt = DateTime.Now
+        };
+
+        await Api.AddCompletionAsync(completion);
+        
+        // Atualizar estatísticas do hábito
+        habit.LastCompletedAt = DateTime.Now;
+        habit.TotalCompletions++;
+        
+        // Calcular sequência
+        var yesterdayCompletion = await Api.GetCompletionsByDateAsync(AppState.CurrentUser!.Id, DateTime.Today.AddDays(-1));
+        if (yesterdayCompletion.Any(c => c.HabitId == habit.Id))
+        {
+            habit.CurrentStreak++;
+        }
+        else
+        {
+            habit.CurrentStreak = 1;
+        }
+        
+        if (habit.CurrentStreak > habit.BestStreak)
+        {
+            habit.BestStreak = habit.CurrentStreak;
+        }
+
+        await Api.UpdateHabitAsync(habit);
+        await LoadData();
+        StateHasChanged();
+    }
+
+    private async Task UnmarkCompleted(Habit habit)
+    {
+        var completion = completions.FirstOrDefault(c => c.HabitId == habit.Id && c.Date.Date == DateTime.Today);
+        if (completion != null)
+        {
+            await Api.DeleteCompletionAsync(completion.Id);
+            habit.TotalCompletions = Math.Max(0, habit.TotalCompletions - 1);
+            habit.CurrentStreak = Math.Max(0, habit.CurrentStreak - 1);
+            await Api.UpdateHabitAsync(habit);
+            await LoadData();
+            StateHasChanged();
+        }
+    }
+}

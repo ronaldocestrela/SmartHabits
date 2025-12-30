@@ -1,46 +1,96 @@
 @page "/login"
 @inject SmartHabit.Client.Services.IAuthService Auth
 @inject SmartHabit.Client.State.AppState AppState
+@inject NavigationManager Nav
 @using System.ComponentModel.DataAnnotations
 
-<h3>Login</h3>
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title text-center mb-4">Login</h3>
+                    
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
 
-<EditForm Model="loginModel" OnValidSubmit="HandleLogin">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+                    <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger mb-3" />
 
-    <div>
-        <label>Email</label>
-        <InputText @bind-Value="loginModel.Email" />
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <InputText @bind-Value="loginModel.Email" class="form-control" placeholder="Digite seu email" type="email" />
+                            <ValidationMessage For="() => loginModel.Email" class="text-danger" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Senha</label>
+                            <InputText @bind-Value="loginModel.Password" class="form-control" type="password" placeholder="Digite sua senha" />
+                            <ValidationMessage For="() => loginModel.Password" class="text-danger" />
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100 mb-3" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            Entrar
+                        </button>
+                        
+                        <div class="text-center">
+                            <span class="text-muted">Não tem uma conta? </span>
+                            <a href="/register" class="text-decoration-none">Cadastre-se</a>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
     </div>
-    <div>
-        <label>Password</label>
-        <InputText @bind-Value="loginModel.Password" type="password" />
-    </div>
-    <button type="submit">Login</button>
-</EditForm>
+</div>
 
 @code {
     private LoginModel loginModel = new();
+    private string errorMessage = string.Empty;
+    private bool isSubmitting = false;
 
     private async Task HandleLogin()
     {
-        var user = await Auth.LoginAsync(loginModel.Email, loginModel.Password);
-        if (user != null)
+        errorMessage = string.Empty;
+        isSubmitting = true;
+        
+        try
         {
-            AppState.CurrentUser = user;
+            var user = await Auth.LoginAsync(loginModel.Email, loginModel.Password);
+            if (user != null)
+            {
+                AppState.CurrentUser = user;
+                Nav.NavigateTo("/"); // Redirecionar para dashboard após login
+            }
+            else
+            {
+                errorMessage = "Email ou senha inválidos.";
+            }
         }
-        else
+        catch (Exception)
         {
-            // show error (simple)
+            errorMessage = "Ocorreu um erro durante o login. Tente novamente.";
+        }
+        finally
+        {
+            isSubmitting = false;
         }
     }
 
     private class LoginModel
     {
-        [Required]
+        [Required(ErrorMessage = "O email é obrigatório.")]
+        [EmailAddress(ErrorMessage = "Digite um email válido.")]
         public string Email { get; set; } = string.Empty;
-        [Required]
+        
+        [Required(ErrorMessage = "A senha é obrigatória.")]
         public string Password { get; set; } = string.Empty;
     }
 }

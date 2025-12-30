@@ -1,44 +1,247 @@
 @page "/profile"
+@using System.ComponentModel.DataAnnotations
 @inject SmartHabit.Client.State.AppState AppState
 @inject SmartHabit.Client.Services.IAuthService Auth
+@inject SmartHabit.Client.Services.IMockApiService Api
+@inject NavigationManager Nav
 
-<h3>Editar Perfil</h3>
-@if (AppState.CurrentUser == null)
-{
-    <p>Faça login para editar o perfil.</p>
-}
-else
-{
-    <EditForm Model="model" OnValidSubmit="Save">
-        <DataAnnotationsValidator />
-        <div>
-            <label>Nome</label>
-            <InputText @bind-Value="model.FirstName" />
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title mb-4">Meu Perfil</h3>
+                    
+                    @if (AppState.CurrentUser == null)
+                    {
+                        <div class="alert alert-warning">
+                            <p class="mb-0">Por favor, faça login para editar o perfil.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @if (!string.IsNullOrEmpty(successMessage))
+                        {
+                            <div class="alert alert-success">@successMessage</div>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">@errorMessage</div>
+                        }
+
+                        <EditForm Model="model" OnValidSubmit="SaveProfile">
+                            <DataAnnotationsValidator />
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Nome</label>
+                                    <InputText @bind-Value="model.FirstName" class="form-control" placeholder="Digite seu nome" />
+                                    <ValidationMessage For="() => model.FirstName" class="text-danger" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Sobrenome</label>
+                                    <InputText @bind-Value="model.LastName" class="form-control" placeholder="Digite seu sobrenome" />
+                                    <ValidationMessage For="() => model.LastName" class="text-danger" />
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <InputText @bind-Value="model.Email" class="form-control" placeholder="Digite seu email" type="email" disabled />
+                                <div class="form-text text-muted">O email não pode ser alterado.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Telefone</label>
+                                <InputText @bind-Value="model.Phone" class="form-control" placeholder="(00) 00000-0000" />
+                                <ValidationMessage For="() => model.Phone" class="text-danger" />
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label">URL da Foto (opcional)</label>
+                                <InputText @bind-Value="model.PhotoUrl" class="form-control" placeholder="https://exemplo.com/minha-foto.jpg" />
+                                <ValidationMessage For="() => model.PhotoUrl" class="text-danger" />
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Salvar Alterações
+                            </button>
+                        </EditForm>
+                        
+                        <hr class="my-4" />
+                        
+                        <h5 class="mb-3">Alterar Senha</h5>
+                        
+                        <EditForm Model="passwordModel" OnValidSubmit="ChangePassword">
+                            <DataAnnotationsValidator />
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Nova Senha</label>
+                                <InputText @bind-Value="passwordModel.NewPassword" class="form-control" type="password" placeholder="Digite sua nova senha" />
+                                <div class="form-text text-muted">
+                                    A senha deve ter ao menos 8 caracteres, incluindo maiúsculas, minúsculas, números e símbolos.
+                                </div>
+                                <ValidationMessage For="() => passwordModel.NewPassword" class="text-danger" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Confirmar Nova Senha</label>
+                                <InputText @bind-Value="passwordModel.ConfirmPassword" class="form-control" type="password" placeholder="Confirme sua nova senha" />
+                                <ValidationMessage For="() => passwordModel.ConfirmPassword" class="text-danger" />
+                            </div>
+                            
+                            <button type="submit" class="btn btn-outline-primary" disabled="@isChangingPassword">
+                                @if (isChangingPassword)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Alterar Senha
+                            </button>
+                        </EditForm>
+                    }
+                </div>
+            </div>
         </div>
-        <div>
-            <label>Sobrenome</label>
-            <InputText @bind-Value="model.LastName" />
-        </div>
-        <div>
-            <label>Telefone</label>
-            <InputText @bind-Value="model.Phone" />
-        </div>
-        <button type="submit">Salvar</button>
-    </EditForm>
-}
+    </div>
+</div>
 
 @code {
-    private SmartHabit.Client.Models.User model = new();
+    private ProfileModel model = new();
+    private PasswordChangeModel passwordModel = new();
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isSubmitting = false;
+    private bool isChangingPassword = false;
 
     protected override void OnInitialized()
     {
-        if (AppState.CurrentUser != null) model = AppState.CurrentUser;
+        if (AppState.CurrentUser != null)
+        {
+            model = new ProfileModel
+            {
+                FirstName = AppState.CurrentUser.FirstName,
+                LastName = AppState.CurrentUser.LastName,
+                Email = AppState.CurrentUser.Email,
+                Phone = AppState.CurrentUser.Phone,
+                PhotoUrl = AppState.CurrentUser.PhotoUrl
+            };
+        }
     }
 
-    private Task Save()
+    private async Task SaveProfile()
     {
-        // For mock, we rely on the mock api to update the stored user later
-        AppState.CurrentUser = model;
-        return Task.CompletedTask;
+        if (AppState.CurrentUser == null) return;
+        
+        successMessage = string.Empty;
+        errorMessage = string.Empty;
+        isSubmitting = true;
+
+        try
+        {
+            // Atualizar o usuário atual
+            AppState.CurrentUser.FirstName = model.FirstName;
+            AppState.CurrentUser.LastName = model.LastName;
+            AppState.CurrentUser.Phone = model.Phone;
+            AppState.CurrentUser.PhotoUrl = model.PhotoUrl;
+
+            // Salvar no mock API
+            await Api.UpdateUserAsync(AppState.CurrentUser);
+            
+            successMessage = "Perfil atualizado com sucesso!";
+        }
+        catch (Exception)
+        {
+            errorMessage = "Ocorreu um erro ao salvar o perfil. Tente novamente.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task ChangePassword()
+    {
+        if (AppState.CurrentUser == null) return;
+        
+        successMessage = string.Empty;
+        errorMessage = string.Empty;
+        isChangingPassword = true;
+
+        try
+        {
+            // Aqui implementaríamos a lógica de mudança de senha
+            // Por enquanto, apenas simulamos o sucesso
+            await Task.Delay(1000); // Simular processamento
+            
+            successMessage = "Senha alterada com sucesso!";
+            passwordModel = new PasswordChangeModel(); // Limpar formulário
+        }
+        catch (Exception)
+        {
+            errorMessage = "Ocorreu um erro ao alterar a senha. Tente novamente.";
+        }
+        finally
+        {
+            isChangingPassword = false;
+        }
+    }
+
+    private class ProfileModel
+    {
+        [Required(ErrorMessage = "O nome é obrigatório.")]
+        [StringLength(50, ErrorMessage = "O nome deve ter no máximo 50 caracteres.")]
+        public string FirstName { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "O sobrenome é obrigatório.")]
+        [StringLength(50, ErrorMessage = "O sobrenome deve ter no máximo 50 caracteres.")]
+        public string LastName { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "O email é obrigatório.")]
+        [EmailAddress(ErrorMessage = "Digite um email válido.")]
+        public string Email { get; set; } = string.Empty;
+        
+        [Phone(ErrorMessage = "Digite um telefone válido.")]
+        public string Phone { get; set; } = string.Empty;
+        
+        [Url(ErrorMessage = "Digite uma URL válida.")]
+        public string? PhotoUrl { get; set; }
+    }
+
+    private class PasswordChangeModel : IValidatableObject
+    {
+        [Required(ErrorMessage = "A nova senha é obrigatória.")]
+        [StringLength(100, MinimumLength = 8, ErrorMessage = "A senha deve ter entre 8 e 100 caracteres.")]
+        public string NewPassword { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "A confirmação de senha é obrigatória.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            // Validação personalizada de senha forte
+            if (!string.IsNullOrEmpty(NewPassword))
+            {
+                if (!NewPassword.Any(char.IsUpper))
+                    yield return new ValidationResult("A senha deve conter pelo menos uma letra maiúscula.", new[] { nameof(NewPassword) });
+                    
+                if (!NewPassword.Any(char.IsLower))
+                    yield return new ValidationResult("A senha deve conter pelo menos uma letra minúscula.", new[] { nameof(NewPassword) });
+                    
+                if (!NewPassword.Any(char.IsDigit))
+                    yield return new ValidationResult("A senha deve conter pelo menos um número.", new[] { nameof(NewPassword) });
+                    
+                if (!NewPassword.Any(ch => !char.IsLetterOrDigit(ch)))
+                    yield return new ValidationResult("A senha deve conter pelo menos um caractere especial.", new[] { nameof(NewPassword) });
+            }
+            
+            // Validação de confirmação de senha
+            if (NewPassword != ConfirmPassword)
+                yield return new ValidationResult("As senhas não coincidem.", new[] { nameof(ConfirmPassword) });
+        }
     }
 }

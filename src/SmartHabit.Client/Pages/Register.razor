@@ -1,73 +1,178 @@
 @page "/register"
 @inject SmartHabit.Client.Services.IAuthService Auth
 @inject SmartHabit.Client.State.AppState AppState
+@inject NavigationManager Nav
 @using System.ComponentModel.DataAnnotations
+@using System.Text.RegularExpressions
 
-<h3>Register</h3>
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title text-center mb-4">Cadastro</h3>
+                    
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
 
-<EditForm Model="regModel" OnValidSubmit="HandleRegister">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+                    <EditForm Model="regModel" OnValidSubmit="HandleRegister">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger mb-3" />
 
-    <div>
-        <label>First name</label>
-        <InputText @bind-Value="regModel.FirstName" />
+                        <div class="mb-3">
+                            <label class="form-label">Nome</label>
+                            <InputText @bind-Value="regModel.FirstName" class="form-control" placeholder="Digite seu nome" />
+                            <ValidationMessage For="() => regModel.FirstName" class="text-danger" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Sobrenome</label>
+                            <InputText @bind-Value="regModel.LastName" class="form-control" placeholder="Digite seu sobrenome" />
+                            <ValidationMessage For="() => regModel.LastName" class="text-danger" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <InputText @bind-Value="regModel.Email" class="form-control" placeholder="Digite seu email" type="email" />
+                            <ValidationMessage For="() => regModel.Email" class="text-danger" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Telefone</label>
+                            <InputText @bind-Value="regModel.Phone" class="form-control" placeholder="(00) 00000-0000" />
+                            <ValidationMessage For="() => regModel.Phone" class="text-danger" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Senha</label>
+                            <InputText @bind-Value="regModel.Password" class="form-control" type="password" placeholder="Digite sua senha" />
+                            <div class="form-text text-muted small">
+                                A senha deve ter ao menos 8 caracteres, incluindo maiúsculas, minúsculas, números e símbolos.
+                            </div>
+                            <ValidationMessage For="() => regModel.Password" class="text-danger" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Confirmar Senha</label>
+                            <InputText @bind-Value="regModel.Confirm" class="form-control" type="password" placeholder="Confirme sua senha" />
+                            <ValidationMessage For="() => regModel.Confirm" class="text-danger" />
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100 mb-3" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            Cadastrar
+                        </button>
+                        
+                        <div class="text-center">
+                            <span class="text-muted">Já tem uma conta? </span>
+                            <a href="/login" class="text-decoration-none">Fazer Login</a>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
     </div>
-    <div>
-        <label>Last name</label>
-        <InputText @bind-Value="regModel.LastName" />
-    </div>
-    <div>
-        <label>Email</label>
-        <InputText @bind-Value="regModel.Email" />
-    </div>
-    <div>
-        <label>Password</label>
-        <InputText @bind-Value="regModel.Password" type="password" />
-    </div>
-    <div>
-        <label>Confirm</label>
-        <InputText @bind-Value="regModel.Confirm" type="password" />
-    </div>
-    <button type="submit">Register</button>
-</EditForm>
+</div>
 
 @code {
     private RegisterModel regModel = new();
+    private string errorMessage = string.Empty;
+    private bool isSubmitting = false;
 
     private async Task HandleRegister()
     {
-        if (regModel.Password != regModel.Confirm) return;
-        var user = new SmartHabit.Client.Models.User
+        errorMessage = string.Empty;
+        isSubmitting = true;
+        
+        try
         {
-            FirstName = regModel.FirstName,
-            LastName = regModel.LastName,
-            Email = regModel.Email,
-            Phone = regModel.Phone
-        };
-        var created = await Auth.RegisterAsync(user, regModel.Password);
-        if (created != null)
-        {
-            AppState.CurrentUser = created;
+            // Validar se as senhas coincidem
+            if (regModel.Password != regModel.Confirm)
+            {
+                errorMessage = "As senhas não coincidem.";
+                return;
+            }
+
+            var user = new SmartHabit.Client.Models.User
+            {
+                FirstName = regModel.FirstName,
+                LastName = regModel.LastName,
+                Email = regModel.Email,
+                Phone = regModel.Phone
+            };
+            
+            var created = await Auth.RegisterAsync(user, regModel.Password);
+            if (created != null)
+            {
+                AppState.CurrentUser = created;
+                Nav.NavigateTo("/"); // Redirecionar para dashboard após registro
+            }
+            else
+            {
+                errorMessage = "Falha no cadastro. Verifique se o email não está em uso e se a senha atende aos critérios.";
+            }
         }
-        else
+        catch (Exception ex)
         {
-            // show validation error
+            errorMessage = "Ocorreu um erro durante o cadastro. Tente novamente.";
+        }
+        finally
+        {
+            isSubmitting = false;
         }
     }
 
-    private class RegisterModel
+    private class RegisterModel : IValidatableObject
     {
-        [Required]
+        [Required(ErrorMessage = "O nome é obrigatório.")]
+        [StringLength(50, ErrorMessage = "O nome deve ter no máximo 50 caracteres.")]
         public string FirstName { get; set; } = string.Empty;
-        [Required]
+        
+        [Required(ErrorMessage = "O sobrenome é obrigatório.")]
+        [StringLength(50, ErrorMessage = "O sobrenome deve ter no máximo 50 caracteres.")]
         public string LastName { get; set; } = string.Empty;
-        [Required, EmailAddress]
+        
+        [Required(ErrorMessage = "O email é obrigatório.")]
+        [EmailAddress(ErrorMessage = "Digite um email válido.")]
         public string Email { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "O telefone é obrigatório.")]
+        [Phone(ErrorMessage = "Digite um telefone válido.")]
         public string Phone { get; set; } = string.Empty;
-        [Required]
+        
+        [Required(ErrorMessage = "A senha é obrigatória.")]
+        [StringLength(100, MinimumLength = 8, ErrorMessage = "A senha deve ter entre 8 e 100 caracteres.")]
         public string Password { get; set; } = string.Empty;
-        [Required]
+        
+        [Required(ErrorMessage = "A confirmação de senha é obrigatória.")]
         public string Confirm { get; set; } = string.Empty;
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            // Validação personalizada de senha forte
+            if (!string.IsNullOrEmpty(Password))
+            {
+                if (!Password.Any(char.IsUpper))
+                    yield return new ValidationResult("A senha deve conter pelo menos uma letra maiúscula.", new[] { nameof(Password) });
+                    
+                if (!Password.Any(char.IsLower))
+                    yield return new ValidationResult("A senha deve conter pelo menos uma letra minúscula.", new[] { nameof(Password) });
+                    
+                if (!Password.Any(char.IsDigit))
+                    yield return new ValidationResult("A senha deve conter pelo menos um número.", new[] { nameof(Password) });
+                    
+                if (!Password.Any(ch => !char.IsLetterOrDigit(ch)))
+                    yield return new ValidationResult("A senha deve conter pelo menos um caractere especial.", new[] { nameof(Password) });
+            }
+            
+            // Validação de confirmação de senha
+            if (Password != Confirm)
+                yield return new ValidationResult("As senhas não coincidem.", new[] { nameof(Confirm) });
+        }
     }
 }

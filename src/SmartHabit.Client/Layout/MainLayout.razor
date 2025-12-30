@@ -1,12 +1,25 @@
 ﻿@inherits LayoutComponentBase
+@inject SmartHabit.Client.Services.IThemeService ThemeService
+@inject SmartHabit.Client.State.AppState AppState
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
     </div>
 
     <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        <div class="top-row px-4 d-flex justify-content-between align-items-center">
+            <h4 class="m-0">SmartHabits</h4>
+            <div class="d-flex align-items-center gap-3">
+                @if (AppState.CurrentUser != null)
+                {
+                    <span class="text-muted">Olá, @AppState.CurrentUser.FirstName!</span>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="Logout">Sair</button>
+                }
+                <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleTheme">
+                    @(isDark ? "☀️ Claro" : "🌙 Escuro")
+                </button>
+            </div>
         </div>
 
         <article class="content px-4">
@@ -14,3 +27,42 @@
         </article>
     </main>
 </div>
+
+@code {
+    private bool isDark = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ThemeService.InitializeThemeAsync();
+        isDark = await ThemeService.IsDarkAsync();
+        ThemeService.ThemeChanged += OnThemeChanged;
+        AppState.StateChanged += StateHasChanged;
+    }
+
+    private async Task ToggleTheme()
+    {
+        isDark = !isDark;
+        await ThemeService.SetDarkAsync(isDark);
+    }
+
+    private void OnThemeChanged()
+    {
+        InvokeAsync(async () =>
+        {
+            isDark = await ThemeService.IsDarkAsync();
+            StateHasChanged();
+        });
+    }
+
+    private async Task Logout()
+    {
+        AppState.CurrentUser = null;
+        await Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
+        AppState.StateChanged -= StateHasChanged;
+    }
+}

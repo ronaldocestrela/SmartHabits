@@ -1,0 +1,244 @@
+@page "/habits/{habitId}/goals/create"
+@using SmartHabit.Client.Models
+@using System.ComponentModel.DataAnnotations
+@inject SmartHabit.Client.Services.IMockApiService Api
+@inject SmartHabit.Client.State.AppState AppState
+@inject NavigationManager Nav
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title mb-1">Definir Meta</h3>
+                    @if (habit != null)
+                    {
+                        <p class="text-muted mb-4">para o hábito: <strong>@habit.Title</strong></p>
+                    }
+                    
+                    @if (AppState.CurrentUser == null)
+                    {
+                        <div class="alert alert-warning">
+                            <p class="mb-0">Por favor, faça login primeiro.</p>
+                        </div>
+                    }
+                    else if (habit == null)
+                    {
+                        <div class="alert alert-danger">
+                            <p class="mb-0">Hábito não encontrado.</p>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+                    else
+                    {
+                        <EditForm Model="model" OnValidSubmit="Save">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger mb-3" />
+
+                            <div class="mb-3">
+                                <label class="form-label">Título da Meta</label>
+                                <InputText @bind-Value="model.Title" class="form-control" placeholder="Ex: Praticar 30 dias seguidos" />
+                                <ValidationMessage For="() => model.Title" class="text-danger" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Descrição</label>
+                                <InputTextArea @bind-Value="model.Description" class="form-control" rows="3" placeholder="Descreva sua meta em detalhes..." />
+                                <ValidationMessage For="() => model.Description" class="text-danger" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Tipo de Meta</label>
+                                <InputSelect @bind-Value="model.Type" class="form-select" @onchange="OnGoalTypeChanged">
+                                    <option value="@GoalType.Daily">Diária</option>
+                                    <option value="@GoalType.Weekly">Semanal</option>
+                                    <option value="@GoalType.Monthly">Mensal</option>
+                                    <option value="@GoalType.Custom">Período Personalizado</option>
+                                </InputSelect>
+                                <ValidationMessage For="() => model.Type" class="text-danger" />
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Data de Início</label>
+                                    <InputDate @bind-Value="model.StartDate" class="form-control" />
+                                    <ValidationMessage For="() => model.StartDate" class="text-danger" />
+                                </div>
+                                @if (model.Type == GoalType.Custom)
+                                {
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Data de Fim</label>
+                                        <InputDate @bind-Value="model.EndDate" class="form-control" />
+                                        <ValidationMessage For="() => model.EndDate" class="text-danger" />
+                                    </div>
+                                }
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Quantas vezes por @GetPeriodName()</label>
+                                <InputNumber @bind-Value="model.TargetCount" class="form-control" min="1" />
+                                <ValidationMessage For="() => model.TargetCount" class="text-danger" />
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label">Duração por sessão (opcional)</label>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <InputNumber @bind-Value="durationMinutes" class="form-control" placeholder="Minutos" min="0" />
+                                        <div class="form-text">Minutos</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <InputNumber @bind-Value="durationSeconds" class="form-control" placeholder="Segundos" min="0" max="59" />
+                                        <div class="form-text">Segundos</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-3">
+                                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    Criar Meta
+                                </button>
+                                <button type="button" class="btn btn-secondary" @onclick="Cancel">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string HabitId { get; set; } = string.Empty;
+    
+    private Habit? habit;
+    private CreateGoalModel model = new();
+    private string errorMessage = string.Empty;
+    private bool isSubmitting = false;
+    private int durationMinutes = 0;
+    private int durationSeconds = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AppState.CurrentUser != null && !string.IsNullOrEmpty(HabitId))
+        {
+            habit = await Api.GetHabitAsync(HabitId);
+            if (habit?.OwnerId != AppState.CurrentUser.Id)
+            {
+                habit = null; // Usuário não é dono do hábito
+            }
+        }
+
+        model.StartDate = DateTime.Today;
+    }
+
+    private string GetPeriodName()
+    {
+        return model.Type switch
+        {
+            GoalType.Daily => "dia",
+            GoalType.Weekly => "semana",
+            GoalType.Monthly => "mês",
+            GoalType.Custom => "período",
+            _ => "período"
+        };
+    }
+
+    private void OnGoalTypeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<GoalType>(e.Value?.ToString(), out var goalType))
+        {
+            model.Type = goalType;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Save()
+    {
+        if (AppState.CurrentUser == null || habit == null) return;
+        
+        errorMessage = string.Empty;
+        isSubmitting = true;
+
+        try
+        {
+            var goal = new HabitGoal
+            {
+                HabitId = habit.Id,
+                Title = model.Title,
+                Description = model.Description,
+                Type = model.Type,
+                StartDate = model.StartDate,
+                EndDate = model.EndDate,
+                TargetCount = model.TargetCount
+            };
+
+            // Configurar duração se especificada
+            if (durationMinutes > 0 || durationSeconds > 0)
+            {
+                goal.TargetDuration = new TimeSpan(0, durationMinutes, durationSeconds);
+            }
+
+            await Api.AddGoalAsync(goal);
+            Nav.NavigateTo($"/habits/{habit.Id}");
+        }
+        catch (Exception)
+        {
+            errorMessage = "Ocorreu um erro ao criar a meta. Tente novamente.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Nav.NavigateTo($"/habits/{HabitId}");
+    }
+
+    private class CreateGoalModel : IValidatableObject
+    {
+        [Required(ErrorMessage = "O título é obrigatório.")]
+        [StringLength(100, ErrorMessage = "O título deve ter no máximo 100 caracteres.")]
+        public string Title { get; set; } = string.Empty;
+        
+        [StringLength(500, ErrorMessage = "A descrição deve ter no máximo 500 caracteres.")]
+        public string? Description { get; set; }
+        
+        [Required(ErrorMessage = "Selecione um tipo de meta.")]
+        public GoalType Type { get; set; } = GoalType.Daily;
+        
+        [Required(ErrorMessage = "A data de início é obrigatória.")]
+        public DateTime StartDate { get; set; } = DateTime.Today;
+        
+        public DateTime? EndDate { get; set; }
+        
+        [Range(1, int.MaxValue, ErrorMessage = "A meta deve ser pelo menos 1.")]
+        public int TargetCount { get; set; } = 1;
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (Type == GoalType.Custom)
+            {
+                if (EndDate == null)
+                {
+                    yield return new ValidationResult("A data de fim é obrigatória para metas personalizadas.", new[] { nameof(EndDate) });
+                }
+                else if (EndDate <= StartDate)
+                {
+                    yield return new ValidationResult("A data de fim deve ser posterior à data de início.", new[] { nameof(EndDate) });
+                }
+            }
+        }
+    }
+}
