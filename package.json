@@ -1,0 +1,94 @@
+{
+  "name": "SmartHabits",
+  "version": "1.0.0",
+  "description": "Aplicação web moderna para gestão e acompanhamento de hábitos pessoais",
+  "author": "SmartHabits Team",
+  "homepage": "https://github.com/username/smarthabits",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/smarthabits.git"
+  },
+  "license": "MIT",
+  "keywords": [
+    "habits",
+    "productivity",
+    "blazor",
+    "webassembly",
+    "dotnet",
+    "self-improvement",
+    "tracking",
+    "goals"
+  ],
+  "framework": ".NET 10",
+  "platform": "Blazor WebAssembly",
+  "features": [
+    "Gestão completa de hábitos",
+    "Sistema de metas flexível",
+    "Dashboard interativo",
+    "Autenticação segura",
+    "Temas claro/escuro",
+    "Interface responsiva",
+    "Persistência local"
+  ],
+  "technologies": {
+    "frontend": "Blazor WebAssembly",
+    "framework": ".NET 10",
+    "ui": "Bootstrap 5",
+    "styling": "CSS Custom Properties",
+    "data": "LocalStorage (Mock)",
+    "validation": "DataAnnotations"
+  },
+  "browser_support": {
+    "chrome": "≥90",
+    "firefox": "≥88",
+    "safari": "≥14",
+    "edge": "≥90"
+  },
+  "scripts": {
+    "build": "dotnet build",
+    "run": "dotnet run --project src/SmartHabit.Client",
+    "publish": "dotnet publish src/SmartHabit.Client -c Release",
+    "test": "dotnet test",
+    "clean": "dotnet clean"
+  },
+  "release_notes": {
+    "v1.0.0": {
+      "date": "2024-12-30",
+      "title": "Lançamento Inicial",
+      "highlights": [
+        "Sistema completo de gestão de hábitos",
+        "Dashboard interativo com estatísticas",
+        "Autenticação segura e validação robusta",
+        "Interface moderna com temas personalizáveis",
+        "Arquitetura escalável e limpa"
+      ],
+      "new_features": 8,
+      "bug_fixes": 0,
+      "breaking_changes": false
+    }
+  },
+  "roadmap": {
+    "v1.1.0": [
+      "Integração com API real",
+      "Notificações push",
+      "Sistema de backup"
+    ],
+    "v1.2.0": [
+      "Gráficos e relatórios",
+      "Export/import de dados",
+      "Modo offline"
+    ],
+    "v2.0.0": [
+      "Sistema de gamificação",
+      "Comunidade",
+      "App mobile nativo"
+    ]
+  },
+  "build_info": {
+    "build_date": "2024-12-30",
+    "target_framework": "net10.0",
+    "runtime": "browser-wasm",
+    "configuration": "Release",
+    "self_contained": true
+  }
+}
